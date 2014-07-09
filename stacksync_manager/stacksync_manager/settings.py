@@ -66,7 +66,7 @@ DATABASES = {
         'NAME': 'stacksync',
         'USER': 'stacksync_user',
         'PASSWORD': 'stacksync',
-        'HOST': '127.0.0.1',
+        'HOST': '192.168.56.101',
         'PORT': '5432',
     }
 }
@@ -93,13 +93,13 @@ STATIC_URL = '/static/'
 
 # StackSync Settings
 
-USER_TABLE = 'stacksync_user'
-WORKSPACE_TABLE = 'stacksync_workspace'
-MEMBERSHIP_TABLE = 'stacksync_membership'
+USER_TABLE = 'user1'
+WORKSPACE_TABLE = 'workspace'
+MEMBERSHIP_TABLE = 'workspace_user'
 
-KEYSTONE_AUTH_URL = 'http://10.30.235.91:5000/v2.0'
+KEYSTONE_AUTH_URL = 'http://192.168.56.101:5000/v2.0'
 KEYSTONE_TENANT = 'stacksync'
 KEYSTONE_ADMIN_USER = 'stacksync_admin'
-KEYSTONE_ADMIN_PASSWORD = 'secrete'
-SWIFT_URL = 'http://10.30.235.91:8080/v1'
+KEYSTONE_ADMIN_PASSWORD = 'secret'
+SWIFT_URL = 'http://192.168.56.101:8080/v1'
 

@@ -22,6 +22,12 @@ def create_container(token_id=None, keystone_username=None, swift_url=None, swif
     swift.put_container(swift_url, token_id, swift_container,
                         headers=headers)
 
+def set_container_quota(token_id=None, swift_url=None, swift_container=None, quota_limit=0):
+    """sets the physical quota limit on the container"""
+    headers = {'X-Container-Meta-Quota-Bytes': quota_limit}
+    swift.post_container(swift_url, token_id, swift_container,
+                        headers=headers)
+
 
 class StacksyncUser(models.Model):
     id = UUIDField(auto_add=True, primary_key=True)
@@ -70,6 +76,7 @@ class StacksyncUser(models.Model):
         membership = StacksyncMembership.objects.create(user=self, workspace=workspace, name='default')
         create_container(self.keystone.get_token('id'), keystone_username, workspace.swift_url,
                          workspace.swift_container)
+        set_container_quota(self.keystone.get_token('id'), workspace.swift_url, workspace.swift_container, self.quota_limit)
 
     def delete(self, using=None):
         keystone_user = self.get_keystone_user()
@@ -93,7 +100,7 @@ class StacksyncUser(models.Model):
         return [x for x in tenants if x.name == settings.KEYSTONE_TENANT][0]
 
     def get_workspaces(self):
-        pass
+        return list(StacksyncWorkspace.objects.filter(owner=self))
 
 
 class StacksyncWorkspaceManager(models.Manager):
@@ -129,6 +136,22 @@ class StacksyncWorkspace(models.Model):
     def __unicode__(self):
         return UUIDAdapter(self.id).getquoted()
 
+    def get_physical_quota(self):
+        """
+        Gets quota limit of container in bytes
+
+        :return int:
+        """
+        keystone = client.Client(username=settings.KEYSTONE_ADMIN_USER,
+                              password=settings.KEYSTONE_ADMIN_PASSWORD,
+                              tenant_name=settings.KEYSTONE_TENANT,
+                              auth_url=settings.KEYSTONE_AUTH_URL)
+
+        container_metadata = swift.head_container(self.swift_url, keystone.get_token('id'), self.swift_container)
+
+        return int(container_metadata.get('x-container-meta-quota-bytes', 0))
+
+
 
 class StacksyncMembership(models.Model):
     id = UUIDField(auto_add=True, primary_key=True)
@@ -142,3 +165,7 @@ class StacksyncMembership(models.Model):
     class Meta:
         db_table = settings.MEMBERSHIP_TABLE
         unique_together = (("user", "workspace"),)
+
+class Container():
+    def __init__(self):
+        self.quota_limit = 0

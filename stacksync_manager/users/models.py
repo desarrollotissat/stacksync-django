@@ -1,4 +1,6 @@
 from django.db import models
+from django_pg.models import UUIDField
+from django_pg.models.fields.uuid import UUIDAdapter
 from keystoneclient.v2_0 import client
 from swiftclient import client as swift
 from django.conf import settings
@@ -22,7 +24,7 @@ def create_container(token_id=None, keystone_username=None, swift_url=None, swif
 
 
 class StacksyncUser(models.Model):
-    id = models.CharField(max_length=37, primary_key=True, default=make_uuid(), unique=True, editable=False)
+    id = UUIDField(auto_add=True, primary_key=True)
     name = models.CharField(max_length=100)
     email = models.CharField(max_length=100)
     swift_user = models.CharField(max_length=100, unique=True)
@@ -109,10 +111,9 @@ class StacksyncWorkspaceManager(models.Manager):
 
 
 class StacksyncWorkspace(models.Model):
-    id = models.CharField(max_length=37, primary_key=True, default=make_uuid(), unique=True, editable=False)
+    id = UUIDField(verbose_name='UUID', auto_add=True, primary_key=True)
     users = models.ManyToManyField(StacksyncUser, through='StacksyncMembership',
                                    related_name='stacksyncworkspace_users')
-    # name = models.CharField(max_length=200)
     latest_revision = models.IntegerField(default=0)
     owner = models.ForeignKey(StacksyncUser)
     is_shared = models.BooleanField(default=False)
@@ -126,11 +127,11 @@ class StacksyncWorkspace(models.Model):
         db_table = settings.WORKSPACE_TABLE
 
     def __unicode__(self):
-        return self.id
+        return UUIDAdapter(self.id).getquoted()
 
 
 class StacksyncMembership(models.Model):
-    id = models.CharField(max_length=37, primary_key=True, default=make_uuid(), unique=True, editable=False)
+    id = UUIDField(auto_add=True, primary_key=True)
     user = models.ForeignKey(StacksyncUser, related_name='stacksyncmembership_user')
     workspace = models.ForeignKey(StacksyncWorkspace)
     name = models.CharField(max_length=200, db_column="workspace_name")

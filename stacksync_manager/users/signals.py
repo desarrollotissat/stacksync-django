@@ -10,8 +10,9 @@ def create_openstack_user_for_stacksync_user(sender, instance, *args, **kwargs):
         keystone_username = settings.KEYSTONE_TENANT + '_' + prefix() + '_' + instance.name
 
         instance.swift_user = keystone_username
-        instance.keystone_client.create_keystone_user(keystone_username, instance.stacksync_tenant, keystone_password)
-
+        instance.keystone.users.create(name=keystone_username,
+                                       password=keystone_password,
+                                       tenant_id=instance.stacksync_tenant.id)
 
 @receiver(post_save, sender=StacksyncUser)
 def create_default_workspace_for_user(sender, instance, created, **kwargs):

@@ -37,29 +37,6 @@ class SwiftClient():
         swift.post_container(swift_url, self.keystone.get_token('id'), swift_container, headers=headers)
 
 
-class KeystoneClient():
-    def __init__(self):
-        self.keystone = client.Client(username=settings.KEYSTONE_ADMIN_USER,
-                                      password=settings.KEYSTONE_ADMIN_PASSWORD,
-                                      tenant_name=settings.KEYSTONE_TENANT,
-                                      auth_url=settings.KEYSTONE_AUTH_URL)
-
-    def create_keystone_user(self, keystone_username, stacksync_tenant, keystone_password):
-        return self.keystone.users.create(name=keystone_username,
-                                          password=keystone_password,
-                                          tenant_id=stacksync_tenant.id)
-
-    def get_keystone_user(self, user_name):
-        keystone_users = self.keystone.users.list()
-        keystone_user = next((user for user in keystone_users if user.name == user_name), None)
-
-        return keystone_user
-
-    def get_keystone_tenant(self, keystone_tenant):
-        tenants = self.keystone.tenants.list()
-        return next((x for x in tenants if x.name == keystone_tenant), None)
-
-
 class StacksyncUser(models.Model):
     id = UUIDField(auto_add=True, primary_key=True)
     name = models.CharField(max_length=100)
@@ -76,12 +53,33 @@ class StacksyncUser(models.Model):
 
     def __init__(self, *args, **kwargs):
 
-        self.keystone_client = KeystoneClient()
-        self.keystone_client = kwargs.pop('keystone', self.keystone_client)
+        self.keystone = client.Client(username=settings.KEYSTONE_ADMIN_USER,
+                                      password=settings.KEYSTONE_ADMIN_PASSWORD,
+                                      tenant_name=settings.KEYSTONE_TENANT,
+                                      auth_url=settings.KEYSTONE_AUTH_URL)
+
+        self.keystone = kwargs.pop('keystone', self.keystone)
 
         self.stacksync_tenant = self.get_keystone_tenant()
         super(StacksyncUser, self).__init__(*args, **kwargs)
         self.swift_account = 'AUTH_' + self.stacksync_tenant.id
+
+    @property
+    def keystone(self):
+        """Get the keystone client"""
+        return self._keystone_client
+
+    @keystone.setter
+    def keystone(self, value):
+        self._keystone_client = value
+
+    @property
+    def stacksync_tenant(self):
+        return self._stacksync_tenant
+
+    @stacksync_tenant.setter
+    def stacksync_tenant(self, value):
+        self._stacksync_tenant = value
 
     def delete(self, using=None):
         keystone_user = self.get_keystone_user()
@@ -97,10 +95,12 @@ class StacksyncUser(models.Model):
         return self.email
 
     def get_keystone_user(self):
-        return self.keystone_client.get_keystone_user(self.swift_user)
+        keystone_users = self.keystone.users.list()
+        return next((user for user in keystone_users if user.name == self.swift_user), None)
 
     def get_keystone_tenant(self):
-        return self.keystone_client.get_keystone_tenant(settings.KEYSTONE_TENANT)
+        tenants = self.keystone.tenants.list()
+        return next((x for x in tenants if x.name == settings.KEYSTONE_TENANT), None)
 
     def get_workspaces(self):
         return list(StacksyncWorkspace.objects.filter(owner=self))
@@ -172,7 +172,6 @@ class StacksyncWorkspace(models.Model):
         """
         container_metadata = self.get_container_metadata()
         return int(container_metadata.get('x-container-meta-quota-bytes', 0))
-
 
 
 class StacksyncMembership(models.Model):

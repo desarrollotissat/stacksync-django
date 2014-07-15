@@ -63,7 +63,6 @@ class FunctionalStacksyncUserTests(TestCase):
 
     def __init__(self, *args, **kwargs):
         self.user_name = "testuser"
-        # self.keystone = self.get_mock_keystone()
         super(FunctionalStacksyncUserTests, self).__init__(*args, **kwargs)
 
     def setUp(self):
@@ -113,3 +112,8 @@ class FunctionalStacksyncUserTests(TestCase):
         workspaces = self.testuser.get_workspaces()
         workspace = workspaces[0]
         self.assertEquals(0, workspace.get_physical_quota())
+
+    def test_stacksync_parameters(self):
+        self.assertIsNotNone(self.testuser.swift_account)
+        self.assertIsNotNone(self.testuser.swift_user)
+        self.assertIsNotNone(self.testuser.stacksync_tenant)

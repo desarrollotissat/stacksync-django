@@ -1,4 +1,5 @@
 from django.contrib import admin
+from users.forms import StacksyncUserForm
 from users.models import StacksyncUser, StacksyncWorkspace, StacksyncMembership
 
 class StacksyncMembershipInline(admin.StackedInline):
@@ -13,7 +14,8 @@ class StacksyncWorkspaceAdmin(admin.ModelAdmin):
 
 class StacksyncUserAdmin(admin.ModelAdmin):
     #inlines = [StacksyncMembershipInline]
-    fields = ['name', 'email']
+    form = StacksyncUserForm
+    fields = ['name', 'email', 'password']
     list_display = ('name', 'email', 'swift_user', 'swift_account')
     actions = ['custom_delete']
 
@@ -26,6 +28,11 @@ class StacksyncUserAdmin(admin.ModelAdmin):
             for user in queryset:
                 user.delete()
     custom_delete.short_description = "Delete selected stacksync users"
+
+    def save_model(self, request, obj, form, change):
+        if form.cleaned_data['password']:
+            obj.keystone.users.update_password(obj.get_keystone_user(), form.cleaned_data['password'])
+        obj.save()
 
 admin.site.register(StacksyncUser, StacksyncUserAdmin)
 admin.site.register(StacksyncWorkspace, StacksyncWorkspaceAdmin)

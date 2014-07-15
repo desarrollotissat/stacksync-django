@@ -1,6 +1,7 @@
 from django.contrib import admin
 from oauth.models import Consumer, RequestToken, AccessToken, Nonce
 
+
 class ConsumerAdmin(admin.ModelAdmin):
     list_display = ('user', 'consumer_key', 'consumer_secret')
 
@@ -12,7 +13,7 @@ class RequestTokenAdmin(admin.ModelAdmin):
 class AccessTokenAdmin(admin.ModelAdmin):
     list_display = ('user', 'access_token', 'access_token_secret', 'modified_at')
     list_filter = ['modified_at']
-    search_fields = ['user']
+    search_fields = ['user__email']
 
 class NonceAdmin(admin.ModelAdmin):
     list_display = ('consumer_key','nonce', 'timestamp')

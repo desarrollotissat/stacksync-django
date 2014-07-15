@@ -30,7 +30,7 @@ class OpenstackClient():
                             headers=headers)
 
     def delete_container(self, swift_url=None, swift_container=None):
-        swift.delete_container(swift_url, self.keystone.get_token('id'), swift_container )
+        swift.delete_container(swift_url, self.keystone.get_token('id'), swift_container)
 
     def get_container_metadata(self, swift_url, swift_container):
         return swift.head_container(swift_url, self.keystone.get_token('id'), swift_container)
@@ -85,19 +85,6 @@ class StacksyncUser(models.Model):
         self.stacksync_tenant = self.get_keystone_tenant()
         super(StacksyncUser, self).__init__(*args, **kwargs)
         self.swift_account = 'AUTH_' + self.stacksync_tenant.id
-
-    def save(self, *args, **kwargs):
-        if not self.id:
-            keystone_password = 'testpass'
-            keystone_username = self.openstack_api.create_keystone_user(self.name, self.stacksync_tenant, keystone_password)
-            self.swift_user = keystone_username
-
-            super(StacksyncUser, self).save(*args, **kwargs)
-
-            workspace = StacksyncWorkspace.objects.create_workspace(self)
-
-        else:
-            super(StacksyncUser, self).save(*args, **kwargs)
 
     def delete(self, using=None):
         keystone_user = self.get_keystone_user()

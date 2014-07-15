@@ -8,19 +8,15 @@ import uuid
 
 
 def prefix():
-    return make_uuid().split('-')[0]
+    return str(uuid.uuid4()).split('-')[0]
 
 
-def make_uuid():
-    return str(uuid.uuid4())
-
-
-class OpenstackClient():
+class SwiftClient():
     def __init__(self):
         self.keystone = client.Client(username=settings.KEYSTONE_ADMIN_USER,
-                      password=settings.KEYSTONE_ADMIN_PASSWORD,
-                      tenant_name=settings.KEYSTONE_TENANT,
-                      auth_url=settings.KEYSTONE_AUTH_URL)
+                                      password=settings.KEYSTONE_ADMIN_PASSWORD,
+                                      tenant_name=settings.KEYSTONE_TENANT,
+                                      auth_url=settings.KEYSTONE_AUTH_URL)
 
     def create_container(self, keystone_username=None, swift_url=None, swift_container=None):
         """creates the container in swift with read and write permissions"""
@@ -38,28 +34,30 @@ class OpenstackClient():
     def set_container_quota(self, swift_url=None, swift_container=None, quota_limit=0):
         """sets the physical quota limit on the container"""
         headers = {'X-Container-Meta-Quota-Bytes': quota_limit}
-        swift.post_container(swift_url, self.keystone.get_token('id'), swift_container,
-                            headers=headers)
+        swift.post_container(swift_url, self.keystone.get_token('id'), swift_container, headers=headers)
 
-    def create_keystone_user(self, name, stacksync_tenant, keystone_password):
-        keystone_username = settings.KEYSTONE_TENANT + '_' + prefix() + '_' + name
-        keystone_user = self.keystone.users.create(name=keystone_username,
-                                                   password=keystone_password,
-                                                   tenant_id=stacksync_tenant.id)
 
-        return keystone_username
+class KeystoneClient():
+    def __init__(self):
+        self.keystone = client.Client(username=settings.KEYSTONE_ADMIN_USER,
+                                      password=settings.KEYSTONE_ADMIN_PASSWORD,
+                                      tenant_name=settings.KEYSTONE_TENANT,
+                                      auth_url=settings.KEYSTONE_AUTH_URL)
+
+    def create_keystone_user(self, keystone_username, stacksync_tenant, keystone_password):
+        return self.keystone.users.create(name=keystone_username,
+                                          password=keystone_password,
+                                          tenant_id=stacksync_tenant.id)
 
     def get_keystone_user(self, user_name):
         keystone_users = self.keystone.users.list()
-        users = [user for user in keystone_users if user.name == user_name]
-        if users:
-            return users[0]
-        else:
-            return None
+        keystone_user = next((user for user in keystone_users if user.name == user_name), None)
+
+        return keystone_user
 
     def get_keystone_tenant(self, keystone_tenant):
         tenants = self.keystone.tenants.list()
-        return [x for x in tenants if x.name == keystone_tenant][0]
+        return next((x for x in tenants if x.name == keystone_tenant), None)
 
 
 class StacksyncUser(models.Model):
@@ -73,14 +71,13 @@ class StacksyncUser(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     # objects = StacksyncUserManager()
 
-
     class Meta:
         db_table = settings.USER_TABLE
 
     def __init__(self, *args, **kwargs):
 
-        self.openstack_api = OpenstackClient()
-        self.openstack_api = kwargs.pop('openstack', self.openstack_api)
+        self.keystone_client = KeystoneClient()
+        self.keystone_client = kwargs.pop('keystone', self.keystone_client)
 
         self.stacksync_tenant = self.get_keystone_tenant()
         super(StacksyncUser, self).__init__(*args, **kwargs)
@@ -100,10 +97,10 @@ class StacksyncUser(models.Model):
         return self.email
 
     def get_keystone_user(self):
-        return self.openstack_api.get_keystone_user(self.swift_user)
+        return self.keystone_client.get_keystone_user(self.swift_user)
 
     def get_keystone_tenant(self):
-        return self.openstack_api.get_keystone_tenant(settings.KEYSTONE_TENANT)
+        return self.keystone_client.get_keystone_tenant(settings.KEYSTONE_TENANT)
 
     def get_workspaces(self):
         return list(StacksyncWorkspace.objects.filter(owner=self))
@@ -112,15 +109,16 @@ class StacksyncUser(models.Model):
 class StacksyncWorkspaceManager(models.Manager):
 
     def __init__(self):
-        self.openstack_api = OpenstackClient()
+        self.swift_client = SwiftClient()
         super(StacksyncWorkspaceManager, self).__init__()
 
-    def initialize_container(self, stacksync_user, workspace):
-        self.openstack_api.create_container(stacksync_user.swift_user, workspace.swift_url, workspace.swift_container)
+    def setup_swift_container(self, stacksync_user, workspace):
+        self.swift_client.create_container(stacksync_user.swift_user, workspace.swift_url, workspace.swift_container)
+
         if stacksync_user.quota_limit:
-            self.openstack_api.set_container_quota(workspace.swift_url,
-                                                   workspace.swift_container,
-                                                   stacksync_user.quota_limit)
+            self.swift_client.set_container_quota(workspace.swift_url,
+                                                  workspace.swift_container,
+                                                  stacksync_user.quota_limit)
 
     def create_workspace(self, stacksync_user):
 
@@ -131,9 +129,10 @@ class StacksyncWorkspaceManager(models.Manager):
                                 swift_container=swift_container,
                                 swift_url=swift_url,
                                 is_shared=False)
+
         membership = StacksyncMembership.objects.create(user=stacksync_user, workspace=workspace, name='default')
 
-        self.initialize_container(stacksync_user, workspace)
+        self.setup_swift_container(stacksync_user, workspace)
 
         return workspace
 
@@ -151,7 +150,7 @@ class StacksyncWorkspace(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     objects = StacksyncWorkspaceManager()
-    openstack_api = OpenstackClient()
+    swift_client = SwiftClient()
 
     class Meta:
         db_table = settings.WORKSPACE_TABLE
@@ -160,11 +159,11 @@ class StacksyncWorkspace(models.Model):
         return UUIDAdapter(self.id).getquoted()
 
     def delete(self, using=None):
-        self.openstack_api.delete_container(self.swift_url, self.swift_container)
+        self.swift_client.delete_container(self.swift_url, self.swift_container)
         super(StacksyncWorkspace, self).delete()
 
     def get_container_metadata(self):
-        return self.openstack_api.get_container_metadata(self.swift_url, self.swift_container)
+        return self.swift_client.get_container_metadata(self.swift_url, self.swift_container)
 
     def get_physical_quota(self):
         """

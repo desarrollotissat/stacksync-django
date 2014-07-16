@@ -1,4 +1,5 @@
 from django.contrib import admin
+from oauth.admin import ConsumerInLine
 from users.forms import StacksyncUserForm
 from users.models import StacksyncUser, StacksyncWorkspace, StacksyncMembership
 
@@ -13,7 +14,7 @@ class StacksyncWorkspaceAdmin(admin.ModelAdmin):
 
 
 class StacksyncUserAdmin(admin.ModelAdmin):
-    #inlines = [StacksyncMembershipInline]
+    inlines = [ConsumerInLine]
     form = StacksyncUserForm
     fields = ['name', 'email', 'password']
     list_display = ('name', 'email', 'swift_user', 'swift_account')

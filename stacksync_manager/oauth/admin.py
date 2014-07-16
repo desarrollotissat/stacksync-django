@@ -7,6 +7,11 @@ class ConsumerAdmin(admin.ModelAdmin):
     search_fields = ['user__email', 'consumer_key']
 
 
+class ConsumerInLine(admin.StackedInline):
+    model = Consumer
+    extra = 0
+
+
 class RequestTokenAdmin(admin.ModelAdmin):
     list_display = ('request_token', 'request_token_secret', 'verifier')
     search_fields = ['user__email', 'consumer__consumer_key']

@@ -81,6 +81,26 @@ class StacksyncUser(models.Model):
     def stacksync_tenant(self, value):
         self._stacksync_tenant = value
 
+    def create_new_keystone_user(self, keystone_password):
+        keystone_username = settings.KEYSTONE_TENANT + '_' + prefix() + '_' + self.name
+        self.swift_user = keystone_username
+        self.keystone.users.create(name=keystone_username, password=keystone_password,
+                                   tenant_id=self.stacksync_tenant.id)
+        return keystone_username
+
+    def update_keystone_fields(self, keystone_password):
+        self.keystone.users.update_password(self.get_keystone_user(), keystone_password)
+
+    def save(self, *args, **kwargs):
+        keystone_password = kwargs.pop('password', 'testpass')
+
+        if not self.pk:
+            self.create_new_keystone_user(keystone_password)
+        else:
+            self.update_keystone_fields(keystone_password)
+
+        super(StacksyncUser, self).save(*args, **kwargs)
+
     def delete(self, using=None):
         keystone_user = self.get_keystone_user()
         if keystone_user:

@@ -31,8 +31,10 @@ class StacksyncUserAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         if form.cleaned_data['password']:
-            obj.keystone.users.update_password(obj.get_keystone_user(), form.cleaned_data['password'])
-        obj.save()
+            obj.save(password=form.cleaned_data['password'])
+        else:
+            obj.save()
+
 
 admin.site.register(StacksyncUser, StacksyncUserAdmin)
 admin.site.register(StacksyncWorkspace, StacksyncWorkspaceAdmin)

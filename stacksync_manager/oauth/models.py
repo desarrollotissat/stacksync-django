@@ -7,7 +7,7 @@ class Consumer(models.Model):
     id = models.AutoField(primary_key=True)
     consumer_key = models.CharField(max_length=100)
     consumer_secret = models.CharField(max_length=100)
-    rsa_key = models.CharField(max_length=100)
+    rsa_key = models.CharField(max_length=100, blank=True)
     user = models.ForeignKey(StacksyncUser, db_column="user")
     realm = models.CharField(max_length=100)
     redirect_uri = models.CharField(max_length=100)
@@ -21,7 +21,7 @@ class Consumer(models.Model):
         db_table = "oauth1_consumers"
 
     def __unicode__(self):
-        return self.user
+        return u'%s -key: %s -secret: %s' % (self.user, self.consumer_key, self.consumer_secret)
 
 
 class RequestToken(models.Model):
@@ -41,7 +41,7 @@ class RequestToken(models.Model):
         db_table = "oauth1_request_tokens"
 
     def __unicode__(self):
-        return u'%s - %s - %s' % (self.request_token, self.request_token_secret, self.verifier)
+        return u'token:%s - secret:%s - verifier:%s' % (self.request_token, self.request_token_secret, self.verifier)
 
 
 class AccessToken(models.Model):
@@ -59,7 +59,7 @@ class AccessToken(models.Model):
         db_table = "oauth1_access_tokens"
 
     def __unicode__(self):
-        return u'%s - %s' % (self.access_token, self.access_token_secret)
+        return u'token:%s - secret:%s' % (self.access_token, self.access_token_secret)
 
 
 class Nonce(models.Model):

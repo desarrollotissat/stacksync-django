@@ -2,64 +2,53 @@ from django.test import TestCase
 
 from mock import MagicMock, patch
 from swiftclient import client as swift
-from users.models import StacksyncUser, StacksyncWorkspace
-
-# class StacksyncTest(TestCase):
-#
-#     # @patch('users.models.StacksyncWorkspace')
-#     # @patch('users.models.StacksyncWorkspaceManager')
-#     @patch.object('users.models.StacksyncWorkspaceManager', 'initialize_container')
-#     def test_create_user(self):
-#         """
-#         This test doesnt actually get to create any container
-#         :param mock:
-#         :return:
-#         """
-#         testuser = StacksyncUser(name="AAA", email="testuser@testuser.com")
-#         testuser.openstack_api = MagicMock()
-#         testuser.openstack_api.keystone = self.get_mock_keystone()
-#         testuser.openstack_api.create_keystone_user.return_value = "swift_user_mocked"
-#         testuser.save.StacksyncWorkspace.initialize_container = MagicMock()
-#
-#         testuser.save()
-#         self.testuser = testuser
-#
-#
-#         self.assertIsNotNone(testuser.id)
-#         self.assertNotEquals(testuser.swift_account, u"")
-#         self.assertIsNotNone(testuser.pk)
-#
-#
-#     def get_mock_stacksync_tenant(self):
-#         tenant = MagicMock()
-#         tenant.name = 'stacksync'
-#         tenant.id = 'id_of_Tenant'
-#         return tenant
-#
-#     def get_mock_keystone(self):
-#         keystone = MagicMock()
-#         tenant = self.get_mock_stacksync_tenant()
-#         keystone.tenants.list.return_value = [tenant]
-#         return keystone
-#
-#     def get_mock_keystone_user(self):
-#         keystone_user = MagicMock()
-#         keystone_user.name = "swift_user_mocked"
-#
-#         return keystone_user
+from users.models import StacksyncUser, StacksyncWorkspace, StacksyncWorkspaceManager
 
 
-    # def test_delete_user(self):
-    #     testuser = StacksyncUser(name="AAA", email="testuser@testuser.com")
-    #     testuser.save()
-    #     self.assertIsNotNone(testuser.id)
-    #
-    #     testuser.delete()
-    #     self.assertIsNone(testuser.id)
+class StacksyncTest(TestCase):
+    """
+    Fake class to test user creation deletion
+    """
+
+    @patch.object(StacksyncWorkspaceManager, 'setup_swift_container')
+    def test_create_user(self, mock):
+        testuser = StacksyncUser(name="AAA", email="testuser@testuser.com", keystone=self.get_mock_keystone())
+
+        testuser.save()
+        self.testuser = testuser
+        self.assertIsNotNone(testuser.id)
+        self.assertNotEquals(testuser.swift_account, u"")
+        self.assertIsNotNone(testuser.pk)
+
+
+    def get_mock_stacksync_tenant(self):
+        tenant = MagicMock()
+        tenant.name = 'stacksync'
+        tenant.id = 'id_of_Tenant'
+        return tenant
+
+    def get_mock_keystone(self):
+        keystone = MagicMock()
+        tenant = self.get_mock_stacksync_tenant()
+        keystone.tenants.list.return_value = [tenant]
+        return keystone
+
+    @patch.object(swift, 'delete_container')
+    def test_delete_user(self, mock):
+        testuser = StacksyncUser(name="AAA", email="testuser@testuser.com")
+        testuser.save()
+        self.assertIsNotNone(testuser.id)
+
+        testuser.delete()
+        self.assertIsNone(testuser.id)
 
 
 
 class FunctionalStacksyncUserTests(TestCase):
+    """
+    This class connects to all the databases, and openstack services.
+    Therefore it is slow.
+    """
 
     def __init__(self, *args, **kwargs):
         self.user_name = "testuser"

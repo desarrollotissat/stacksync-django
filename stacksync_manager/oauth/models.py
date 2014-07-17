@@ -1,3 +1,4 @@
+from django.core.urlresolvers import reverse
 from django.db import models
 from users.models import StacksyncUser
 
@@ -22,6 +23,9 @@ class Consumer(models.Model):
 
     def __unicode__(self):
         return u'%s -key: %s -secret: %s' % (self.user, self.consumer_key, self.consumer_secret)
+
+    def get_absolute_url(self):
+        return reverse('admin:oauth_consumer_change', args=[str(self.id)])
 
 
 class RequestToken(models.Model):

@@ -1,3 +1,4 @@
+from django.core.urlresolvers import reverse
 from django.db import models
 from django_pg.models import UUIDField
 from django_pg.models.fields.uuid import UUIDAdapter
@@ -124,6 +125,9 @@ class StacksyncUser(models.Model):
 
     def get_workspaces(self):
         return list(StacksyncWorkspace.objects.filter(owner=self))
+
+    def get_absolute_url(self):
+        return reverse('admin:users_stacksyncuser_change', args=[str(self.id)])
 
 
 class StacksyncWorkspaceManager(models.Manager):

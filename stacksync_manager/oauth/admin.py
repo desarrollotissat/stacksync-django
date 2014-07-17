@@ -7,7 +7,7 @@ class ConsumerAdmin(admin.ModelAdmin):
     search_fields = ['user__email', 'consumer_key']
 
 
-class ConsumerInLine(admin.StackedInline):
+class ConsumerInLine(admin.TabularInline):
     model = Consumer
     extra = 0
 
@@ -16,7 +16,7 @@ class RequestTokenAdmin(admin.ModelAdmin):
     list_display = ('request_token', 'request_token_secret', 'verifier')
     search_fields = ['user__email', 'consumer__consumer_key']
 
-class RequestTokenInLine(admin.StackedInline):
+class RequestTokenInLine(admin.TabularInline):
     model = RequestToken
     extra = 0
 
@@ -26,7 +26,7 @@ class AccessTokenAdmin(admin.ModelAdmin):
     list_filter = ['modified_at']
     search_fields = ['user__email', 'consumer__consumer_key']
 
-class AccessTokenInLine(admin.StackedInline):
+class AccessTokenInLine(admin.TabularInline):
     model = AccessToken
     extra = 0
 

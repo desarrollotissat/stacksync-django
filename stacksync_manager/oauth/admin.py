@@ -16,11 +16,19 @@ class RequestTokenAdmin(admin.ModelAdmin):
     list_display = ('request_token', 'request_token_secret', 'verifier')
     search_fields = ['user__email', 'consumer__consumer_key']
 
+class RequestTokenInLine(admin.StackedInline):
+    model = RequestToken
+    extra = 0
+
 
 class AccessTokenAdmin(admin.ModelAdmin):
     list_display = ('user', 'access_token', 'access_token_secret', 'modified_at')
     list_filter = ['modified_at']
     search_fields = ['user__email', 'consumer__consumer_key']
+
+class AccessTokenInLine(admin.StackedInline):
+    model = AccessToken
+    extra = 0
 
 
 class NonceAdmin(admin.ModelAdmin):

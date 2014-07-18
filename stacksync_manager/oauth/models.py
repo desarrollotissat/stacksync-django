@@ -65,6 +65,9 @@ class AccessToken(models.Model):
     def __unicode__(self):
         return u'token:%s - secret:%s' % (self.access_token, self.access_token_secret)
 
+    def get_absolute_url(self):
+        return reverse('admin:oauth_accesstoken_change', args=[str(self.id)])
+
 
 class Nonce(models.Model):
 

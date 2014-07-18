@@ -18,6 +18,7 @@ class StacksyncUserAdmin(admin.ModelAdmin):
     form = StacksyncUserForm
     fields = ['name', 'email', 'password']
     list_display = ('name', 'email', 'swift_user', 'swift_account')
+    search_fields = ['name', 'email', 'swift_user', 'swift_account']
     actions = ['custom_delete']
 
     def get_actions(self, request):
